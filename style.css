@@ -22,11 +22,54 @@ hr {
     border: 1px solid #476892;
 }
 
-.childContainer {
+.pulsePar {
+    align-content: center;
+    display: flex;
+}
+
+.titleCon:not(.subTitle) {
+    display: flex;
+    gap: 5px;
+}
+
+.childContainer:not(.uselessCheckboxes) {
     max-width: 350px;
     display: flex;
     flex-direction: column; 
     gap: 15px;
+}
+
+.pulseEffect {
+    display: flex;
+    align-self: center;
+    width: 10px;
+    height: 10px;
+    background-color: rgb(0, 11, 58);
+    border-radius: 50%;
+    position: relative;
+}
+
+.pulseEffect::after {
+    content: '';
+    position: absolute;
+    background-color: chartreuse;
+    border-radius: 50%;
+    top: 0;
+    left: 0;
+    height: 10px;
+    width: 10px;
+    animation: pulse 1.5s ease-out infinite;
+
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    } 100% {
+        transform: scale(2.5);
+        opacity: 0;
+    }
 }
 
 .title {
@@ -38,7 +81,6 @@ hr {
 .subTitle {
     color: rgb(223, 223, 223);
     font-family:'Courier New', Courier, monospace;
-    margin-top: 5px;
 }
 
 .nodeTitle {
@@ -53,7 +95,7 @@ hr {
     width: 100%;
 }
 
-input, #selector {
+input:not(.checkbox), #selector {
     padding: 1em;
     border: none;
     border-radius: 10px;
@@ -88,7 +130,6 @@ input, #selector {
     transition: rotate 150ms ease-in;
     font-weight: 900; 
     font-size: 15px;
-    align-content: center;
     color: white;
     content: "\f107";
     font-family: "Font Awesome 7 Free"; 
@@ -112,6 +153,63 @@ input {
     background-color: rgb(4, 4, 68);
     color: white;
     font-family: 'Courier New', Courier, monospace;
+}
+
+input::placeholder {
+    font-size: 17px;
+    color: white;
+}
+
+
+.uselessCheckboxes input[type="checkbox"] {
+    width: 35px;
+    height: 35px;
+    appearance: none;
+    cursor: pointer;
+    border-radius: 10%;
+    border: white 2px solid;
+    place-content: center;
+    display: grid;
+}
+
+.uselessCheckboxes input[type="checkbox"]::before {
+    content: '';
+    background-color: rgb(52, 221, 0);
+    height: 35px;
+    width: 35px;
+    border-radius: 10%;
+    box-shadow: 0 0 8px rgb(1, 238, 21);
+    background-image: url(checkmarkRounded.svg);
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+    scale: 0;
+    opacity: 0;
+    transition: 200ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.uselessCheckboxes input[type="checkbox"]:checked::before {
+    scale: 1;
+    opacity: 1;
+}
+
+.uselessCheckboxes input[type="checkbox"]:focus-visible {
+    outline: 2px solid springgreen;
+    outline-offset: 2px;
+}
+
+.uselessCheckboxes label {
+    display: flex;
+    align-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 5px;
+    font-size: 30px;
+    font-weight: bolder;
+    color: white;
+    font-family: 'Courier New', Courier, monospace;
+    align-self: center;
+    line-height: 1;
 }
 
 .btnContainer {
@@ -143,8 +241,8 @@ input {
 }
 
 .miscBtns button {
-    flex: 1;              /* makes them equal width */
-    height: 55px;         /* keep same height */
+    flex: 1;            
+    height: 55px;        
     font-size: 15px;
     border: none;
     border-radius: 10px;
@@ -163,7 +261,7 @@ input {
 }
 
 .clearCanvas {
-    background-color: rgb(219, 7, 7);
+    background-color: rgb(253, 52, 52);
     border-radius: 10px;
     font-size: 15px;
     position: relative;
@@ -181,9 +279,8 @@ input {
     content: '';
     position: absolute;
     inset: 0;
-    padding: 2px; /* border thickness */
+    padding: 1px; 
     border-radius: 10px;
-    /* creates hollow center */
     -webkit-mask:
         linear-gradient(#000 0 0) content-box,
         linear-gradient(#000 0 0);
@@ -194,15 +291,14 @@ input {
 }
 
 .btnContainer button:hover::before {
-    animation: animate 1s linear infinite;
+    animation: animate 850ms linear infinite;
         background: conic-gradient(
         from var(--angle),
-        red,
-        yellow,
         lime,
-        orange,
-        pink,
-        red
+        transparent,
+        lime,
+        transparent,
+        lime
     );
 }
 
@@ -219,7 +315,9 @@ input {
 .screen {
     background-color: hsl(212, 100%, 16%);
     width: 100%;
-    margin: 20px;
+    margin: 10px;
     border-radius: 4px;
     border: 1px solid black;
+    box-shadow: -2px 1px 15px hsl(213, 100%, 9%);
+
 }

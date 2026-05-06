@@ -17,20 +17,21 @@ class BinaryTree {
         this.root = null;
     }
 
-    insert(value) {
-        const newNode = new Node(value);
-        if (!this.root) { this.root = newNode; return; }
-        let current = this.root;
-        while (true) {
-            if (value < current.value) {
-                if (!current.left) { current.left = newNode; return; }
-                current = current.left;
-            } else {
-                if (!current.right) { current.right = newNode; return; }
-                current = current.right;
-            }
+insert(value) {
+    const newNode = new Node(value);
+    if (!this.root) { this.root = newNode; return; }
+    let current = this.root;
+    while (true) {
+        if (value === current.value) { return; } // duplicate, do nothing
+        if (value < current.value) {
+            if (!current.left) { current.left = newNode; return; }
+            current = current.left;
+        } else {
+            if (!current.right) { current.right = newNode; return; }
+            current = current.right;
         }
     }
+}
 
     delete(value, root = this.root) {
         if (!root) return null;
@@ -144,21 +145,23 @@ function layout() {
 
     const startX = canvas.width / 2;
     const startY = 60;
-    const initialOffset = canvas.width / 4; // controls spread
+    const initialOffset = canvas.width / 4;
+
+    // Padding so nodes never touch the edges
+    const pad = NODE_R + 4;
 
     function setPosition(node, x, y, offset) {
         if (!node) return;
 
-        node.x = x;
-        node.y = y;
+        // Clamp x so the circle stays inside canvas bounds
+        node.x = Math.max(pad, Math.min(canvas.width - pad, x));
+        node.y = Math.max(pad, Math.min(canvas.height - pad, y));
 
-        // Reduce spacing each level
         const nextOffset = offset * 0.55;
 
         if (node.left) {
             setPosition(node.left, x - offset, y + V_GAP, nextOffset);
         }
-
         if (node.right) {
             setPosition(node.right, x + offset, y + V_GAP, nextOffset);
         }
@@ -294,22 +297,23 @@ actionBtn.addEventListener('click', async () => {
             draw();
         }
     } else {
-        // flash node before deleting
-        let cur = tree.root;
-        while (cur && cur.value !== value) {
-            cur = value < cur.value ? cur.left : cur.right;
-        }
-        if (cur) {
-            highlighted = new Set([cur]);
-            draw();
-            await sleep(300);
-            highlighted = new Set();
-        }
-        tree.root  = tree.delete(value);
+    let cur = tree.root;
+    while (cur && cur.value !== value) {
+        cur = value < cur.value ? cur.left : cur.right;
+    }
+    if (cur) {
+        highlighted = new Set([cur]);
+        draw();
+        await sleep(300);
+        highlighted = new Set();
+        tree.root = tree.delete(value);
         layout();
         visitedSet = new Set();
         draw();
+    } else {
+        resultEl.textContent = `⚠️ ${value} is not in the tree`;
     }
+}
 });
 
 // Traverse (Post-order)
