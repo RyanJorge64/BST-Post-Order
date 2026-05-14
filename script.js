@@ -79,6 +79,7 @@ function clearTree() {
     tree.clear();
     highlighted = new Set();
     visitedSet = new Set();
+    highlighter = null;
     resultEl.textContent = '';
     layout();
     draw();
@@ -95,6 +96,7 @@ function generateRandomTree(size = 10) {
 
     highlighted = new Set();
     visitedSet = new Set();
+    highlighter = null;
 
     layout();
     draw();
@@ -174,13 +176,6 @@ function layout() {
 let highlighted = new Set();
 let visitedSet  = new Set();
 
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (!tree.root) return;
-    drawEdges(tree.root);
-    drawNodes(tree.root);
-}
-
 function drawEdges(n) {
     if (!n) return;
     ctx.strokeStyle = '#444';
@@ -233,23 +228,99 @@ function drawNodes(n) {
     ctx.stroke();
 
     ctx.fillStyle = text;
-    ctx.font = 'bold 13px Arial';
+    ctx.font = 'bold 0.8rem Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(String(n.value), 0, 0);
     ctx.restore();
 }
 
+//   Highlighter state   
+let highlighter = null; // { x, y, alpha, pulse }
+
+function drawHighlighter() {
+    if (!highlighter) return;
+    const { x, y, alpha, pulse } = highlighter;
+    const outerR = NODE_R + 8 + Math.sin(pulse) * 4;
+
+    // Outer glow ring
+    const grad = ctx.createRadialGradient(x, y, NODE_R - 2, x, y, outerR + 10);
+    grad.addColorStop(0,   `rgba(124, 255, 0, ${alpha * 0.55})`);
+    grad.addColorStop(0.5, `rgba(57, 255, 20, ${alpha * 0.25})`);
+    grad.addColorStop(1,   `rgba(0, 255, 100, 0)`);
+
+    ctx.beginPath();
+    ctx.arc(x, y, outerR + 10, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Sharp ring stroke
+    ctx.beginPath();
+    ctx.arc(x, y, outerR, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(124, 255, 0, ${alpha})`;
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = 'rgba(124,255,0,0.9)';
+    ctx.shadowBlur = 12;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!tree.root) return;
+    drawEdges(tree.root);
+    drawNodes(tree.root);
+    drawHighlighter();
+}
+
 //   Animation Helpers   
-function animateNode(node, duration = 300) {
+function animateHighlighterTo(node, fromNode, duration = 320) {
+    return new Promise(resolve => {
+        const startX = fromNode ? fromNode.x : node.x;
+        const startY = fromNode ? fromNode.y : node.y;
+        const endX   = node.x;
+        const endY   = node.y;
+        const start  = performance.now();
+        let pulse    = 0;
+
+        function tick(now) {
+            const raw = (now - start) / duration;
+            const p   = Math.min(raw, 1);
+            // ease in-out cubic
+            const t   = p < 0.5 ? 4*p*p*p : 1 - Math.pow(-2*p+2,3)/2;
+
+            pulse += 0.18;
+            highlighter = {
+                x:     startX + (endX - startX) * t,
+                y:     startY + (endY - startY) * t,
+                alpha: 0.85 + 0.15 * Math.sin(pulse),
+                pulse
+            };
+            draw();
+
+            if (p < 1) requestAnimationFrame(tick);
+            else {
+                highlighter = { x: endX, y: endY, alpha: 1, pulse };
+                draw();
+                resolve();
+            }
+        }
+        requestAnimationFrame(tick);
+    });
+}
+
+function pulseHighlighterAt(node, duration = 260) {
     return new Promise(resolve => {
         const start = performance.now();
+        let pulse = highlighter ? highlighter.pulse : 0;
+
         function tick(now) {
             const p = Math.min((now - start) / duration, 1);
-            node._scale = 1 + 0.4 * Math.sin(p * Math.PI);
+            pulse += 0.22;
+            highlighter = { x: node.x, y: node.y, alpha: 1 - p * 0.3, pulse };
             draw();
             if (p < 1) requestAnimationFrame(tick);
-            else { node._scale = 1; draw(); resolve(); }
+            else { draw(); resolve(); }
         }
         requestAnimationFrame(tick);
     });
@@ -289,9 +360,21 @@ actionBtn.addEventListener('click', async () => {
             cur = value < cur.value ? cur.left : cur.right;
         }
         if (cur) {
-            highlighted = new Set([cur]);
+            highlighter = { x: cur.x, y: cur.y, alpha: 1, pulse: 0 };
             draw();
-            await animateNode(cur, 400);
+            await pulseHighlighterAt(cur, 400);
+            await new Promise(resolve => {
+                const fadeStart = performance.now();
+                const snap = { ...highlighter };
+                function fade(now) {
+                    const p = Math.min((now - fadeStart) / 250, 1);
+                    highlighter = { ...snap, alpha: 1 - p };
+                    draw();
+                    if (p < 1) requestAnimationFrame(fade);
+                    else { highlighter = null; draw(); resolve(); }
+                }
+                requestAnimationFrame(fade);
+            });
             highlighted = new Set();
             visitedSet  = new Set();
             draw();
@@ -316,34 +399,54 @@ actionBtn.addEventListener('click', async () => {
 }
 });
 
-// Traverse (Post-order)
+// Traverse
 traverseBtn.addEventListener('click', async () => {
     if (animating || !tree.root) return;
     animating = true;
     visitedSet  = new Set();
     highlighted = new Set();
+    highlighter = null;
     resultEl.textContent = '';
 
     const order  = tree.postOrder();
     const values = [];
+    let prevNode = null;
 
     for (const n of order) {
-        highlighted = new Set([n]);
-        draw();
+        // Travel highlighter from previous node (or spawn at first node)
+        await animateHighlighterTo(n, prevNode, prevNode ? 340 : 0);
+        // Brief pulse at the landed node
+        await pulseHighlighterAt(n, 220);
+
         values.push(n.value);
         resultEl.textContent = 'Post-order: ' + values.join(' → ');
-        await animateNode(n, 280);
-        highlighted = new Set();
+
         visitedSet.add(n);
+        prevNode = n;
         draw();
-        await sleep(80);
+        await sleep(60);
     }
+
+    // Fade out highlighter
+    const fadeStart = performance.now();
+    const fadeDur   = 400;
+    const lastH     = { ...highlighter };
+    await new Promise(resolve => {
+        function fade(now) {
+            const p = Math.min((now - fadeStart) / fadeDur, 1);
+            highlighter = { ...lastH, alpha: 1 - p };
+            draw();
+            if (p < 1) requestAnimationFrame(fade);
+            else { highlighter = null; draw(); resolve(); }
+        }
+        requestAnimationFrame(fade);
+    });
 
     highlighted = new Set();
     draw();
     animating = false;
 });
 
-//   Init   
+//   Initialize
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();

@@ -9,6 +9,7 @@ body {
     background-color: hsl(212, 100%, 15%);
     display: flex;
     height: 100vh;
+
 }
 
 .sideBarParent {
@@ -16,6 +17,18 @@ body {
     background-color: hsl(212, 100%, 11%);
     padding: 20px;
     border-right: 1px solid #476892;
+}
+
+@media (max-width: 600px){
+    body {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .childContainer {
+        display: flex;
+        min-width: 100%;
+    }
 }
 
 hr {
@@ -33,10 +46,10 @@ hr {
 }
 
 .childContainer:not(.uselessCheckboxes) {
-    max-width: 350px;
+    max-width: 21.875rem;
     display: flex;
     flex-direction: column; 
-    gap: 15px;
+    gap: 0.9375rem;
 }
 
 .pulseEffect {
